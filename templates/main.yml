@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters: 
+  ECSDesiredCount:
+    Type: Number
+
+Resources:
+  VPC:
+    Type: AWS::CloudFormation::Stack
+    Properties: 
+      TemplateURL: ./vpc.yml
+
+  Pipeline:
+    Type: AWS::CloudFormation::Stack
+    Properties: 
+      TemplateURL: ./pipeline.yml
+      Parameters: 
+        ECSCluster: !GetAtt ECS.Outputs.Cluster
+        ECSService: !GetAtt ECS.Outputs.Service
+
+  ECS:
+    Type: AWS::CloudFormation::Stack
+    Properties: 
+      TemplateURL: ./fargate.yml
+      Parameters: 
+        VPC: !GetAtt VPC.Outputs.VPC
+        Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/swift-app:latest"
+        ECSDesiredCount: !Ref ECSDesiredCount
+        PublicSubnetA: !GetAtt VPC.Outputs.PublicSubnetA
+        PublicSubnetB: !GetAtt VPC.Outputs.PublicSubnetB
+        PrivateSubnetA: !GetAtt VPC.Outputs.PrivateSubnetA
+        PrivateSubnetB: !GetAtt VPC.Outputs.PrivateSubnetB
+
+Outputs:
+  EcsLbUrl:
+    Value: !GetAtt ECS.Outputs.EcsLbUrl
+  S3ArtifactBucket:
+    Value: !GetAtt Pipeline.Outputs.ArtifactStoreS3Location
+  AppImage:
+    Value: !GetAtt Pipeline.Outputs.AppImage
+  CodeBuildImage:
+    Value: !GetAtt Pipeline.Outputs.CodeBuildImage

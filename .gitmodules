@@ -1,0 +1,3 @@
+[submodule "sample-vapor-app"]
+	path = sample-vapor-app
+	url = https://github.com/gestrich/sample-vapor-app.git

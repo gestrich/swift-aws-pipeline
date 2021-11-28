@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: VPC stack for Swift build stack
+
+Resources: 
+  WebAppVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-VPC"
+
+  WebAppVPCIGW:
+    Type: AWS::EC2::InternetGateway
+
+  WebAppVPCIGWAttach:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref WebAppVPC
+      InternetGatewayId: !Ref WebAppVPCIGW
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref WebAppVPC
+      Tags:
+      - Key: Name
+        Value: Public Route Table
+
+  PublicEgressRoute:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref PublicRouteTable
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref WebAppVPCIGW
+
+  WebAppPublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: WebAppVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      Tags:
+        - Key: Name
+          Value: Public Subnet A
+
+  WebAppPublicSubnetAAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref WebAppPublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  WebAppPublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: WebAppVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      Tags:
+        - Key: Name
+          Value: Public Subnet B
+
+  WebAppPublicSubnetBAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref WebAppPublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  WebAppNAT:
+     Type: AWS::EC2::NatGateway
+     Properties:
+        AllocationId: !GetAtt WebAppNATEIP.AllocationId
+        SubnetId: !Ref WebAppPublicSubnetA
+
+  WebAppNATEIP:
+     DependsOn: WebAppVPCIGWAttach
+     Type: AWS::EC2::EIP
+     Properties:
+        Domain: vpc
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref WebAppVPC
+      Tags:
+      - Key: Name
+        Value: Private Route Table
+
+  PrivateEgressRoute:
+    Type: AWS::EC2::Route
+    Properties:
+       RouteTableId: !Ref PrivateRouteTable
+       DestinationCidrBlock: 0.0.0.0/0
+       NatGatewayId: !Ref WebAppNAT
+
+  WebAppPrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: WebAppVPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+      Tags:
+        - Key: Name
+          Value: Private Subnet A
+
+  WebAppPrivateSubnetAAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref WebAppPrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  WebAppPrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: WebAppVPC
+      CidrBlock: 10.0.4.0/24
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      Tags:
+        - Key: Name
+          Value: Private Subnet B
+
+  WebAppPrivateSubnetBAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref WebAppPrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTable
+
+Outputs:
+  PublicSubnetA: 
+    Value: !Ref WebAppPublicSubnetA
+  PublicSubnetB: 
+    Value: !Ref WebAppPublicSubnetB
+  PrivateSubnetA: 
+    Value: !Ref WebAppPrivateSubnetA
+  PrivateSubnetB: 
+    Value: !Ref WebAppPrivateSubnetB
+  VPC:
+    Value: !Ref WebAppVPC
