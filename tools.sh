@@ -75,7 +75,7 @@ function pushAppCodeRepo(){
   cd $APP_REPO_PATH
   repo_name="$(aws codecommit list-repositories | jq -r '.repositories[] | select(.repositoryName | startswith("swift-build-Pipeline")) | .repositoryName')";
   url="$(aws codecommit get-repository   --repository-name $repo_name | jq -r '.repositoryMetadata.cloneUrlHttp')"
-  git remote set-url aws  $url
+  git remote add aws  $url
   git push --force --set-upstream aws master
   cd ..
 
